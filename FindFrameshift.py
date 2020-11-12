@@ -159,30 +159,4 @@ def find_fs_protein(fusion_prot: Seq) -> Seq:
     return fusion_prot[start_index + 1:]
 
 
-if __name__ == "__main__":
-    # protein_seq = "NP_040593.1"
-    # genome_refseq = "NC_001416"
-    # get_genomes(genome_refseq)
-    # gene_ids = locate_gene_id("my_genbank.gb")
-    # formatted_genes = format_gene_id(gene_ids)
-    # print(formatted_genes)
-    g_region = find_genome_region("26634148")
-    extended_g_sequence = find_extended_DNA_seq("NC_028896.1", g_region)
-    g_sequence = find_actual_DNA_seq("NC_028896.1", g_region)
-    print(g_sequence.transcribe())
-    print(extended_g_sequence.transcribe())
-    print(g_sequence[len(g_sequence)-30:].transcribe())
-    orfs = find_orf(extended_g_sequence, len(g_sequence))
-    proteins = []
-    for orf in orfs:
-        proteins.append(DNA_to_protein(orf))
-    print("****LONGEST****")
-    fusion_prot = find_longest(proteins, g_sequence)
-    print(fusion_prot)
-    print("******FRAMESHIFT AREA******")
-    desired_prot = find_fs_protein(fusion_prot)
-    print(desired_prot)
-    frameshift_region = find_frameshift(desired_prot, orfs, g_sequence)[0]
-    print(frameshift_region)
-
 

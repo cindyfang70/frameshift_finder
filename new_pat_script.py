@@ -1,18 +1,8 @@
 import xlrd
 import pandas as pd
-import numpy as np
-from Bio.Blast import NCBIWWW
-from Bio import Entrez
-from Bio import SeqIO
 from FindFrameshift import *
 import urllib.error
-from Bio import pairwise2
-from Bio.pairwise2 import format_alignment
-from Bio.Align import MultipleSeqAlignment
-from Bio import AlignIO
 from Bio.SeqRecord import SeqRecord
-from Bio.Alphabet import generic_dna
-from Bio.Seq import Seq
 
 
 class Organism:
@@ -46,7 +36,7 @@ class Organism:
 th_df = pd.read_excel("gpt_dataa.xlsx", sheet_name="gpT")
 tg_df = pd.read_excel("gpt_dataa.xlsx", sheet_name="gpG")
 tm_df = pd.read_excel("gpt_dataa.xlsx", sheet_name="gpH")
-
+print(len(tm_df), len(tg_df))
 th_df.drop_duplicates(subset="Species", keep="first", inplace=True)
 tg_df.drop_duplicates(subset="Species", keep="first", inplace=True)
 tm_df.drop_duplicates(subset="Species", keep="first", inplace=True)
@@ -54,18 +44,18 @@ tm_df.drop_duplicates(subset="Species", keep="first", inplace=True)
 th_df.reset_index(inplace=True)
 tg_df.reset_index(inplace=True)
 tm_df.reset_index(inplace=True)
-
+print(len(tm_df), len(tg_df))
 th_len = len(th_df)
 tg_len = len(tg_df)
 tm_len = len(tm_df)
 
-gpt_organisms = []
+th_organisms = []
 for i in range(th_len):
     species_name = th_df["Species"][i]
     genome_refseq = th_df["Genome RefSeq"][i]
     protein_refseq = th_df["Protein RefSeq"][i]
     organism = Organism(species_name, genome_refseq, None, protein_refseq)
-    gpt_organisms.append(organism)
+    th_organisms.append(organism)
 
 tg_organisms = []
 for i in range(tg_len):
@@ -85,13 +75,13 @@ for i in range(tm_len):
     tm_organism.tm_refseq = protein_refseq
     tm_organisms.append(tm_organism)
 
-shared_organisms = []
-for g_organism in tg_organisms:
-    for t_organism in gpt_organisms:
-        if g_organism.name == t_organism.name:
-            g_organism.th_refseq = t_organism.th_refseq
-            shared_organisms.append(g_organism)
-            continue
+# shared_organisms = []
+# for g_organism in tg_organisms:
+#     for t_organism in th_organisms:
+#         if g_organism.name == t_organism.name:
+#             g_organism.th_refseq = t_organism.th_refseq
+#             shared_organisms.append(g_organism)
+#             continue
 
 shared_by_all = []
 for tg_organism in tg_organisms:
@@ -99,6 +89,7 @@ for tg_organism in tg_organisms:
         if tg_organism.genome_refseq == tm_organism.genome_refseq:
             tg_organism.tm_refseq = tm_organism.tm_refseq
             shared_by_all.append(tg_organism)
+print("shared_by_all: " + str(len(shared_by_all)))
 
 gene_ids = []
 for tg_organism in shared_by_all:
@@ -139,63 +130,6 @@ for gene_id in gene_ids:
             gene = gene.split(":")[1]
             tg_organism.th_geneid = gene
 print("finished checking geneids")
-
-""" for the organisms that didn't have geneid matches, download their protein 
-gb files and get the geneids from there """
-# no_geneid_organisms = []
-# for tg_organism in shared_by_all:
-#     if tg_organism.tg_geneid == None:
-#         no_geneid_organisms.append(tg_organism)
-#         Entrez.email = "cindyfang70@gmail.com"
-#         try:
-#             with open("tg_protein_genbank.gb", "a") as out_handle:
-#                 result_handle = Entrez.efetch(db="protein",
-#                                               id=tg_organism.tg_refseq,
-#                                               rettype="gb", retmode="text")
-#                 out_handle.write(result_handle.read())
-#                 result_handle.close()
-#         except urllib.error.HTTPError:
-#             pass
-#     if tg_organism.tm_refseq == None:
-#         Entrez.email = "cinndyfang70@gmail.com"
-#         try:
-#             with open("tm_protein_genbank.gb", "a") as out_handle:
-#                 result_handle = Entrez.efetch(db="protein",
-#                                               id=tg_organism.tg_refseq,
-#                                               rettype="gb", retmode="text")
-#                 out_handle.write(result_handle.read())
-#                 result_handle.close()
-#         except urllib.error.HTTPError:
-#             pass
-# tg_gene_ids = []
-# for seq_record in SeqIO.parse("tg_protein_genbank.gb", "genbank"):
-#     for seq_feature in seq_record.features:
-#         if seq_feature.type == "CDS" and "db_xref" in seq_feature.qualifiers:
-#             tg_gene_ids.append((seq_feature.qualifiers["db_xref"],
-#                                 seq_record.id))
-#             print((seq_feature.qualifiers["db_xref"], seq_record.id))
-#
-# tm_gene_ids = []
-# for seq_record in SeqIO.parse("tm_protein_genbank.gb", "genbank"):
-#     for seq_feature in seq_record.features:
-#         if seq_feature.type == "CDS" and "db_xref" in seq_feature.qualifiers:
-#             tg_gene_ids.append((seq_feature.qualifiers["db_xref"],
-#                                 seq_record.id))
-#             print((seq_feature.qualifiers["db_xref"], seq_record.id))
-#
-# for organism in no_geneid_organisms:
-#     for geneid in tg_gene_ids:
-#         if geneid[1] == organism.tg_refseq:
-#             for entry in geneid:
-#                 if "GeneID" in entry:
-#                     gene = entry.split(":")[1]
-#                     organism.tg_geneid = gene
-#     for geneid in tm_gene_ids:
-#         if geneid[1] == organism.tm_refseq:
-#             if "GeneID" in entry and geneid[1]:
-#                 gene = entry.split(":")[1]
-#                 organism.tg_geneid = gene
-#     organism.print_organism()
 for translation in translations:
     for tg_organism in shared_by_all:
         if tg_organism.th_refseq in translation[1]:
@@ -204,6 +138,7 @@ for translation in translations:
 num_match = 0
 num_mismatch = 0
 frameshift_regions = []
+TG_proteins = []
 desired_prots = []
 for tg_organism in shared_by_all:
     print("***********************")
@@ -225,6 +160,8 @@ for tg_organism in shared_by_all:
     try:
         g_sequence = find_actual_DNA_seq(tg_organism.genome_refseq, g_region)
         tg_organism.tg_sequence = g_sequence
+        tg_protein = g_sequence.transcribe().translate()
+        TG_proteins.append(SeqRecord(tg_protein, tg_organism.name+ "|" + tg_organism.genome_refseq))
         tg_organism.tg_length = len(g_sequence)
     except (RuntimeError, urllib.error.HTTPError, IndexError):
         pass
@@ -300,3 +237,6 @@ with open("frameshift.fasta", "w") as output_handle:
 
 with open("frameshifted_proteins.fasta", "w") as output_handle:
     SeqIO.write(desired_prots, output_handle, "fasta")
+
+with open("TG_proteins.fasta", "w") as output_handle:
+    SeqIO.write(TG_proteins, output_handle, "fasta")
